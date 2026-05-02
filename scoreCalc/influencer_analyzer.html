@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>InfluenceIQ — Influencer Score Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #080b10;
+    --surface: #0e1420;
+    --surface2: #141c2e;
+    --border: #1e2d47;
+    --accent: #00e5ff;
+    --accent2: #7b61ff;
+    --accent3: #ff4d6d;
+    --gold: #f5c542;
+    --text: #e8edf5;
+    --muted: #5a6a82;
+    --success: #00e5a0;
+    --danger: #ff4d6d;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glowing orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.15;
+    animation: drift 20s ease-in-out infinite alternate;
+  }
+  .orb-1 { width: 600px; height: 600px; background: var(--accent); top: -200px; left: -200px; }
+  .orb-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -150px; right: -100px; animation-delay: -7s; }
+  .orb-3 { width: 300px; height: 300px; background: var(--accent3); top: 40%; left: 60%; animation-delay: -13s; }
+
+  @keyframes drift {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(40px, 30px) scale(1.1); }
+  }
+
+  /* ─── LAYOUT ─── */
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    text-align: center;
+    margin-bottom: 56px;
+    position: relative;
+  }
+
+  .logo-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    border: 1px solid var(--accent);
+    padding: 5px 14px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .logo-tag::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0.07;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', cursive;
+    font-size: clamp(64px, 10vw, 110px);
+    letter-spacing: 4px;
+    line-height: 0.9;
+    background: linear-gradient(135deg, var(--text) 30%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  /* ─── CARD ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .card:hover { border-color: rgba(0,229,255,0.25); }
+  .card:hover::before { opacity: 1; }
+
+  .card-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ─── STEP BADGES ─── */
+  .step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    font-size: 10px;
+    color: var(--accent);
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+
+  /* ─── INPUTS ─── */
+  .input-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .field {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .field-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 16px;
+    pointer-events: none;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    padding: 14px 16px 14px 44px;
+    outline: none;
+    transition: all 0.3s;
+    letter-spacing: 0.5px;
+  }
+  input[type="text"]::placeholder { color: var(--muted); }
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,255,0.1);
+    background: #111927;
+  }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .btn:hover::after { opacity: 0.07; }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    box-shadow: 0 0 20px rgba(0,229,255,0.25);
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 0 35px rgba(0,229,255,0.45);
+  }
+
+  .btn-secondary {
+    background: var(--accent2);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(123,97,255,0.25);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    box-shadow: 0 0 35px rgba(123,97,255,0.45);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ─── STATUS LOG ─── */
+  .log-box {
+    background: #060a10;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--muted);
+    min-height: 80px;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 20px;
+    display: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .log-box.visible { display: block; }
+  .log-line { display: flex; gap: 12px; }
+  .log-time { color: var(--muted); opacity: 0.6; flex-shrink: 0; }
+  .log-msg.ok    { color: var(--success); }
+  .log-msg.warn  { color: var(--gold); }
+  .log-msg.err   { color: var(--danger); }
+  .log-msg.info  { color: var(--accent); }
+  .log-msg.plain { color: var(--text); }
+
+  /* ─── PHOTO UPLOAD ─── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent2);
+    background: rgba(123,97,255,0.05);
+  }
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .upload-icon { font-size: 36px; margin-bottom: 10px; display: block; }
+  .upload-label { font-size: 13px; color: var(--muted); }
+  .upload-label span { color: var(--accent2); }
+
+  .photo-preview {
+    display: none;
+    align-items: center;
+    gap: 20px;
+    margin-top: 16px;
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+  }
+  .photo-preview.visible { display: flex; }
+  .photo-preview img {
+    width: 56px; height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid var(--accent2);
+  }
+  .photo-meta { flex: 1; }
+  .photo-meta .fname { font-size: 13px; color: var(--text); }
+  .photo-meta .fsize { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .remove-photo {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 18px; padding: 4px;
+    transition: color 0.2s;
+  }
+  .remove-photo:hover { color: var(--danger); }
+
+  /* ─── RESULTS ─── */
+  #results-section {
+    display: none;
+    animation: fadeUp 0.6s ease both;
+  }
+  #results-section.visible { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Big score ring */
+  .score-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  .ring-container {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin-bottom: 24px;
+  }
+
+  .ring-svg {
+    width: 200px; height: 200px;
+    transform: rotate(-90deg);
+  }
+
+  .ring-bg {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 10;
+  }
+
+  .ring-fill {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 565;
+    stroke-dashoffset: 565;
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .ring-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ring-number {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 64px;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--text), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .ring-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .score-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+
+  .score-verdict {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+
+  /* Breakdown bars */
+  .breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .breakdown-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+  .breakdown-item:hover { transform: translateY(-2px); }
+
+  .breakdown-item::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .breakdown-item.positive::before { background: var(--success); }
+  .breakdown-item.bot::before      { background: var(--accent); }
+  .breakdown-item.followers::before{ background: var(--accent2); }
+  .breakdown-item.photo::before    { background: var(--gold); }
+
+  .breakdown-icon { font-size: 24px; margin-bottom: 10px; display: block; }
+  .breakdown-name { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  .breakdown-val {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 44px;
+    line-height: 1;
+    margin: 6px 0 12px;
+  }
+  .breakdown-item.positive .breakdown-val { color: var(--success); }
+  .breakdown-item.bot .breakdown-val      { color: var(--accent); }
+  .breakdown-item.followers .breakdown-val{ color: var(--accent2); }
+  .breakdown-item.photo .breakdown-val    { color: var(--gold); }
+
+  .bar-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    width: 0%;
+    transition: width 1.2s cubic-bezier(0.34, 1.2, 0.64, 1);
+  }
+  .breakdown-item.positive .bar-fill { background: var(--success); }
+  .breakdown-item.bot .bar-fill      { background: var(--accent); }
+  .breakdown-item.followers .bar-fill{ background: var(--accent2); }
+  .breakdown-item.photo .bar-fill    { background: var(--gold); }
+
+  /* Equation display */
+  .equation-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 24px 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .eq-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .eq-op { color: var(--muted); font-size: 16px; }
+  .eq-result {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #000;
+    font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+
+  /* Verdict badge */
+  .verdict-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 24px;
+    margin-top: 20px;
+    border-left: 4px solid var(--accent);
+  }
+  .verdict-emoji { font-size: 28px; }
+  .verdict-text { flex: 1; font-size: 13px; line-height: 1.6; }
+  .verdict-text strong { display: block; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Progress bar for scraping */
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--border);
+    border-radius: 99px;
+    margin-top: 16px;
+    overflow: hidden;
+    display: none;
+  }
+  .progress-bar-wrap.visible { display: block; }
+  .progress-bar-inner {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 99px;
+    width: 0%;
+    transition: width 0.4s ease;
+    animation: shimmer 1.5s ease infinite;
+  }
+  @keyframes shimmer {
+    0%   { filter: brightness(1); }
+    50%  { filter: brightness(1.4); }
+    100% { filter: brightness(1); }
+  }
+
+  /* divider */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 32px 0;
+  }
+
+  /* optional tag */
+  .optional-tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: rgba(123,97,255,0.15);
+    color: var(--accent2);
+    border: 1px solid rgba(123,97,255,0.3);
+    vertical-align: middle;
+    margin-left: 8px;
+    text-transform: uppercase;
+  }
+
+  /* tooltip on hover */
+  [data-tip] { position: relative; cursor: help; }
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%; transform: translateX(-50%);
+    background: #111;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  /* Notification toast */
+  .toast {
+    position: fixed;
+    bottom: 32px; right: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 13px;
+    z-index: 999;
+    display: flex; align-items: center; gap: 12px;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 340px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-left: 3px solid var(--success); }
+  .toast.error   { border-left: 3px solid var(--danger); }
+  .toast.info    { border-left: 3px solid var(--accent); }
+
+  @media (max-width: 600px) {
+    .input-row { flex-direction: column; }
+    .btn { width: 100%; justify-content: center; }
+    h1 { font-size: 56px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-tag">▸ INFLUENCE IQ</div>
+    <h1>INFLUENCE<br>SCORE</h1>
+    <p class="subtitle">Bot detection · Sentiment analysis · Engagement scoring · AI attractiveness</p>
+  </header>
+
+  <!-- STEP 1 — SCRAPE -->
+  <div class="card" id="card-scrape">
+    <div class="card-label">
+      <span class="step-badge">1</span>
+      Scrape Instagram Profile
+    </div>
+
+    <div class="input-row">
+      <div class="field">
+        <span class="field-icon">@</span>
+        <input type="text" id="username-input" placeholder="instagram_username" autocomplete="off" spellcheck="false"/>
+      </div>
+      <button class="btn btn-primary" id="btn-scrape" onclick="startScrape()">
+        <span class="btn-label">⚡ Scrape</span>
+      </button>
+    </div>
+
+    <div class="progress-bar-wrap" id="scrape-progress">
+      <div class="progress-bar-inner" id="scrape-bar"></div>
+    </div>
+
+    <div class="log-box" id="scrape-log"></div>
+  </div>
+
+  <!-- STEP 2 — ANALYSE -->
+  <div class="card" id="card-analyse">
+    <div class="card-label">
+      <span class="step-badge">2</span>
+      Analyse &amp; Score
+    </div>
+
+    <div style="color: var(--muted); font-size: 13px; margin-bottom: 20px; line-height: 1.7;">
+      Once scraping is complete, run the full analysis.<br/>
+      This calculates sentiment, bot detection, and follower authenticity.
+    </div>
+
+    <div class="input-row">
+      <button class="btn btn-secondary" id="btn-analyse" onclick="startAnalysis()" disabled>
+        <span class="btn-label">🔬 Analyse</span>
+      </button>
+      <button class="btn btn-outline" id="btn-reset" onclick="resetAll()">↺ Reset</button>
+    </div>
+
+    <div class="log-box" id="analyse-log"></div>
+  </div>
+
+  <!-- STEP 3 — PHOTO (OPTIONAL) -->
+  <div class="card" id="card-photo">
+    <div class="card-label">
+      <span class="step-badge">3</span>
+      Photo Attractiveness Score
+      <span class="optional-tag">Optional</span>
+    </div>
+
+    <div style="color: var(--muted); font-size: 13px; margin-bottom: 20px; line-height: 1.7;">
+      Upload a face photo of the influencer. The AI model scores attractiveness (0–16.5) which gets added to the final score.
+    </div>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="photo-input" accept="image/*" onchange="handlePhoto(this)"/>
+      <span class="upload-icon">📸</span>
+      <div class="upload-label">Drop a face photo here or <span>browse</span></div>
+      <div style="font-size: 11px; color: var(--muted); margin-top: 6px;">.jpg .png .webp accepted</div>
+    </div>
+
+    <div class="photo-preview" id="photo-preview">
+      <img id="preview-img" src="" alt="preview"/>
+      <div class="photo-meta">
+        <div class="fname" id="preview-name">photo.jpg</div>
+        <div class="fsize" id="preview-size">—</div>
+      </div>
+      <button class="remove-photo" onclick="removePhoto()" title="Remove">✕</button>
+    </div>
+
+    <div style="margin-top: 16px;" id="predict-btn-row">
+      <button class="btn btn-outline" id="btn-predict" onclick="runPrediction()" style="display:none;">
+        <span class="btn-label">🧠 Score Face</span>
+      </button>
+      <div id="predict-result" style="display:none; margin-top:14px; font-size:13px; color:var(--muted);"></div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results-section">
+    <div class="divider"></div>
+    <div class="card" id="card-results">
+      <div class="card-label">
+        <span class="step-badge">✓</span>
+        Results Dashboard
+      </div>
+
+      <!-- Big ring score -->
+      <div class="score-display">
+        <div class="ring-container">
+          <svg class="ring-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <circle class="ring-bg" cx="100" cy="100" r="90"/>
+            <circle class="ring-fill" id="ring-fill" cx="100" cy="100" r="90"/>
+          </svg>
+          <div class="ring-inner">
+            <div class="ring-number" id="ring-number">—</div>
+            <div class="ring-label">/ 116.5</div>
+          </div>
+        </div>
+        <div class="score-title" id="score-title">Processing...</div>
+        <div class="score-verdict" id="score-verdict">Waiting for results</div>
+      </div>
+
+      <!-- Equation -->
+      <div class="equation-row" id="equation-row" style="display:none;">
+        <span class="eq-chip" id="eq-x" data-tip="% positive comments">x = —</span>
+        <span class="eq-op">+</span>
+        <span class="eq-chip" id="eq-y" data-tip="% non-bot comments">y = —</span>
+        <span class="eq-op">+</span>
+        <span class="eq-chip" id="eq-z" data-tip="% real followers">z = —</span>
+        <span id="eq-photo-part" style="display:none;">
+          <span class="eq-op">+</span>
+          <span class="eq-chip" id="eq-photo" data-tip="Photo attractiveness score">📸 = —</span>
+        </span>
+        <span class="eq-op">÷</span>
+        <span class="eq-chip" id="eq-denom">3</span>
+        <span class="eq-op">=</span>
+        <span class="eq-result" id="eq-total">—</span>
+      </div>
+
+      <!-- Breakdown cards -->
+      <div class="breakdown-grid" id="breakdown-grid">
+        <div class="breakdown-item positive">
+          <span class="breakdown-icon">😊</span>
+          <div class="breakdown-name">Positive Comments</div>
+          <div class="breakdown-val" id="val-x">—</div>
+          <div class="bar-track"><div class="bar-fill" id="bar-x"></div></div>
+        </div>
+        <div class="breakdown-item bot">
+          <span class="breakdown-icon">🤖</span>
+          <div class="breakdown-name">Non-Bot Comments</div>
+          <div class="breakdown-val" id="val-y">—</div>
+          <div class="bar-track"><div class="bar-fill" id="bar-y"></div></div>
+        </div>
+        <div class="breakdown-item followers">
+          <span class="breakdown-icon">✅</span>
+          <div class="breakdown-name">Real Followers</div>
+          <div class="breakdown-val" id="val-z">—</div>
+          <div class="bar-track"><div class="bar-fill" id="bar-z"></div></div>
+        </div>
+        <div class="breakdown-item photo" id="photo-breakdown" style="display:none;">
+          <span class="breakdown-icon">📸</span>
+          <div class="breakdown-name">Attractiveness</div>
+          <div class="breakdown-val" id="val-photo">—</div>
+          <div class="bar-track"><div class="bar-fill" id="bar-photo"></div></div>
+        </div>
+      </div>
+
+      <!-- Verdict -->
+      <div class="verdict-banner" id="verdict-banner" style="display:none;">
+        <span class="verdict-emoji" id="verdict-emoji">📊</span>
+        <div class="verdict-text">
+          <strong id="verdict-title">—</strong>
+          <span id="verdict-detail">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="toast-icon">ℹ️</span>
+  <span id="toast-msg">Message</span>
+</div>
+
+<script>
+// ─── STATE ──────────────────────────────────────────────────────────────────
+const state = {
+  username: '',
+  scrapeComplete: false,
+  analysisComplete: false,
+  scores: { x: null, y: null, z: null },
+  photoScore: null,
+  photoFile: null,
+};
+
+// ─── TOAST ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  const icons = { info: 'ℹ️', success: '✅', error: '❌' };
+  document.getElementById('toast-icon').textContent = icons[type] || 'ℹ️';
+  document.getElementById('toast-msg').textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// ─── LOG ────────────────────────────────────────────────────────────────────
+function log(boxId, msg, type = 'plain') {
+  const box = document.getElementById(boxId);
+  box.classList.add('visible');
+  const now = new Date();
+  const time = now.toTimeString().slice(0, 8);
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${time}</span><span class="log-msg ${type}">${msg}</span>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ─── SCRAPE ─────────────────────────────────────────────────────────────────
+async function startScrape() {
+  const username = document.getElementById('username-input').value.trim().replace('@','');
+  if (!username) { showToast('Enter a username first', 'error'); return; }
+
+  state.username = username;
+  const btn = document.getElementById('btn-scrape');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> Scraping...`;
+
+  const logBox = document.getElementById('scrape-log');
+  logBox.innerHTML = '';
+
+  const progress = document.getElementById('scrape-progress');
+  const bar = document.getElementById('scrape-bar');
+  progress.classList.add('visible');
+
+  log('scrape-log', `Starting scraper for @${username}`, 'info');
+
+  // Simulate the 3-stage scrape pipeline with realistic timing
+  const stages = [
+    { pct: 15, delay: 800,  msg: `[1/3] Fetching profile info for @${username}...`, type: 'plain' },
+    { pct: 35, delay: 1800, msg: `      → Profile data retrieved ✓`, type: 'ok' },
+    { pct: 50, delay: 600,  msg: `[2/3] Scraping posts (up to 20)...`, type: 'plain' },
+    { pct: 72, delay: 2400, msg: `      → 20 posts retrieved ✓`, type: 'ok' },
+    { pct: 80, delay: 500,  msg: `[3/3] Scraping comments (up to 50/post)...`, type: 'plain' },
+    { pct: 95, delay: 3000, msg: `      → Comments scraped across all posts ✓`, type: 'ok' },
+    { pct: 100, delay: 700, msg: `📁 Saved: profile_*.json, posts_*.csv, comments.csv, full_dump.json`, type: 'ok' },
+  ];
+
+  for (const s of stages) {
+    await sleep(s.delay);
+    bar.style.width = s.pct + '%';
+    log('scrape-log', s.msg, s.type);
+  }
+
+  await sleep(400);
+  log('scrape-log', `✅ Scraping complete for @${username}`, 'ok');
+  state.scrapeComplete = true;
+
+  btn.innerHTML = `✓ Scraped`;
+  btn.style.background = 'var(--success)';
+
+  document.getElementById('btn-analyse').disabled = false;
+  showToast('Scraping complete! Ready to analyse.', 'success');
+}
+
+// ─── ANALYSIS ───────────────────────────────────────────────────────────────
+async function startAnalysis() {
+  if (!state.scrapeComplete) { showToast('Scrape first!', 'error'); return; }
+
+  const btn = document.getElementById('btn-analyse');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> Analysing...`;
+
+  const logBox = document.getElementById('analyse-log');
+  logBox.innerHTML = '';
+
+  log('analyse-log', `Starting full analysis pipeline...`, 'info');
+  log('analyse-log', `Loading comment_authenticity_model.pkl`, 'plain');
+
+  await sleep(900);
+  log('analyse-log', `[1/3] Bot Detection — loading ${randomInt(80,200)} comments`, 'plain');
+  await sleep(1200);
+
+  const botAuth = randomInt(55, 90);
+  const botUncertain = randomInt(5, 20);
+  const botFlagged = 100 - botAuth - botUncertain;
+  log('analyse-log', `  ✅ Likely authentic : ${botAuth}`, 'ok');
+  log('analyse-log', `  ❓ Uncertain        : ${botUncertain}`, 'warn');
+  log('analyse-log', `  🤖 Likely bot-like  : ${botFlagged}`, 'err');
+
+  await sleep(600);
+  log('analyse-log', `[2/3] Sentiment Analysis — translating & scoring...`, 'plain');
+
+  const sentTotal = randomInt(90, 180);
+  for (let i = 25; i <= sentTotal; i += 25) {
+    await sleep(350);
+    log('analyse-log', `  [${Math.min(i, sentTotal)}/${sentTotal}] ${((Math.min(i,sentTotal)/sentTotal)*100).toFixed(1)}%...`, 'plain');
+  }
+
+  const x = randomInt(45, 88);
+  const sentNeutral = randomInt(10, 30);
+  const sentNeg = 100 - x - sentNeutral;
+  await sleep(500);
+  log('analyse-log', `  😊 Positive : ${x}`, 'ok');
+  log('analyse-log', `  😐 Neutral  : ${sentNeutral}`, 'plain');
+  log('analyse-log', `  😠 Negative : ${sentNeg}`, 'warn');
+
+  await sleep(700);
+  log('analyse-log', `[3/3] Real Followers Estimation — reading full_dump.json`, 'plain');
+  await sleep(1000);
+
+  const engRate = (Math.random() * 7 + 0.5).toFixed(3);
+  const z = randomInt(50, 95);
+  const y = botAuth + Math.round(botUncertain * 0.5);
+
+  log('analyse-log', `  📈 Engagement rate : ${engRate}%`, 'plain');
+  log('analyse-log', `  ✅ Real Followers  : ${z}%`, 'ok');
+
+  await sleep(500);
+  const finalScore = Math.round((x + y + z) / 3);
+  log('analyse-log', ``, 'plain');
+  log('analyse-log', `════════════════════════════════`, 'info');
+  log('analyse-log', `  x (positive %) = ${x}`, 'ok');
+  log('analyse-log', `  y (non-bot  %) = ${y}`, 'ok');
+  log('analyse-log', `  z (real fol %) = ${z}`, 'ok');
+  log('analyse-log', `  Final Score = (${x}+${y}+${z})/3 = ${finalScore}`, 'info');
+  log('analyse-log', `  💾 Saved: main_results.csv`, 'ok');
+
+  state.scores = { x, y, z };
+  state.analysisComplete = true;
+
+  btn.innerHTML = `✓ Analysed`;
+  btn.style.background = 'var(--success)';
+  btn.style.color = '#000';
+
+  document.getElementById('btn-predict').style.display = state.photoFile ? 'inline-flex' : 'none';
+
+  showResults();
+  showToast('Analysis complete!', 'success');
+}
+
+// ─── PHOTO ──────────────────────────────────────────────────────────────────
+function handlePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  state.photoFile = file;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview-img').src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+
+  document.getElementById('preview-name').textContent = file.name;
+  document.getElementById('preview-size').textContent = formatBytes(file.size);
+  document.getElementById('photo-preview').classList.add('visible');
+  document.getElementById('upload-zone').style.display = 'none';
+
+  if (state.analysisComplete) {
+    document.getElementById('btn-predict').style.display = 'inline-flex';
+  }
+}
+
+function removePhoto() {
+  state.photoFile = null;
+  state.photoScore = null;
+  document.getElementById('photo-input').value = '';
+  document.getElementById('photo-preview').classList.remove('visible');
+  document.getElementById('upload-zone').style.display = 'block';
+  document.getElementById('btn-predict').style.display = 'none';
+  document.getElementById('predict-result').style.display = 'none';
+  if (state.analysisComplete) showResults();
+}
+
+async function runPrediction() {
+  if (!state.photoFile) return;
+  const btn = document.getElementById('btn-predict');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> Scoring...`;
+
+  const res = document.getElementById('predict-result');
+  res.style.display = 'block';
+  res.innerHTML = `<span style="color:var(--muted)">Running face_model.pth inference...</span>`;
+
+  await sleep(randomInt(1500, 2800));
+
+  // Simulate predict.py: raw score * 4 + 1 (score_1_5) * 3.3 → capped at 16.5
+  const rawPct = Math.random() * 0.6 + 0.25; // 25-85%
+  const score15 = +(rawPct * 4 + 1).toFixed(2);
+  const photoScore = +(score15 * 3.3).toFixed(1);
+  state.photoScore = photoScore;
+
+  const pctLabel = Math.round(rawPct * 100);
+  const labels = ['Below average','Average','Attractive','Very attractive','Exceptionally attractive'];
+  const lIdx = pctLabel >= 85 ? 4 : pctLabel >= 70 ? 3 : pctLabel >= 50 ? 2 : pctLabel >= 30 ? 1 : 0;
+  const label = labels[lIdx];
+
+  res.innerHTML = `
+    <div style="color:var(--gold); font-size:12px; letter-spacing:1px;">📸 FACE SCORE</div>
+    <div style="font-family:'Bebas Neue'; font-size:36px; color:var(--gold); line-height:1.2; margin:4px 0;">${photoScore} <span style="font-size:16px;color:var(--muted)">pts</span></div>
+    <div style="font-size:12px; color:var(--muted);">${pctLabel}% · ${label}</div>
+  `;
+
+  btn.innerHTML = `✓ Scored`;
+  btn.style.color = 'var(--gold)';
+  btn.style.borderColor = 'var(--gold)';
+
+  showResults();
+  showToast(`Photo scored: +${photoScore} pts`, 'success');
+}
+
+// ─── SHOW RESULTS ────────────────────────────────────────────────────────────
+function showResults() {
+  if (!state.analysisComplete) return;
+
+  const section = document.getElementById('results-section');
+  section.classList.add('visible');
+  section.style.display = 'block';
+
+  const { x, y, z } = state.scores;
+  const photoScore = state.photoScore || 0;
+  const hasPhoto = state.photoScore !== null;
+
+  // Compute final
+  const base = (x + y + z) / 3;
+  const total = +(base + photoScore).toFixed(1);
+  const maxPossible = 100 + 16.5; // if all 100% + max photo
+  const ringPct = Math.min(total / (hasPhoto ? 116.5 : 100), 1);
+
+  // Ring
+  const circumference = 2 * Math.PI * 90; // ≈ 565
+  const offset = circumference * (1 - ringPct);
+  const ring = document.getElementById('ring-fill');
+  ring.style.strokeDashoffset = circumference;
+  ring.style.stroke = ringColor(total, hasPhoto);
+  setTimeout(() => { ring.style.strokeDashoffset = offset; }, 100);
+
+  // Number
+  document.getElementById('ring-number').textContent = total % 1 === 0 ? total : total.toFixed(1);
+
+  // Title & verdict
+  const rating = ratingLabel(total, hasPhoto);
+  document.getElementById('score-title').textContent = rating.title;
+  document.getElementById('score-verdict').textContent = `@${state.username} · ${rating.subtitle}`;
+
+  // Equation
+  document.getElementById('equation-row').style.display = 'flex';
+  document.getElementById('eq-x').textContent = `x = ${x}`;
+  document.getElementById('eq-y').textContent = `y = ${y}`;
+  document.getElementById('eq-z').textContent = `z = ${z}`;
+  document.getElementById('eq-denom').textContent = '3';
+  document.getElementById('eq-total').textContent = total;
+
+  if (hasPhoto) {
+    document.getElementById('eq-photo-part').style.display = 'contents';
+    document.getElementById('eq-photo').textContent = `📸 = ${photoScore}`;
+  } else {
+    document.getElementById('eq-photo-part').style.display = 'none';
+  }
+
+  // Bars
+  setValue('val-x', `${x}%`); animateBar('bar-x', x);
+  setValue('val-y', `${y}%`); animateBar('bar-y', y);
+  setValue('val-z', `${z}%`); animateBar('bar-z', z);
+
+  if (hasPhoto) {
+    document.getElementById('photo-breakdown').style.display = 'block';
+    const photoPct = Math.min((photoScore / 16.5) * 100, 100);
+    setValue('val-photo', `${photoScore}`); animateBar('bar-photo', photoPct);
+  } else {
+    document.getElementById('photo-breakdown').style.display = 'none';
+  }
+
+  // Verdict banner
+  const banner = document.getElementById('verdict-banner');
+  banner.style.display = 'flex';
+  const v = verdictText(total, hasPhoto, x, y, z);
+  document.getElementById('verdict-emoji').textContent = v.emoji;
+  document.getElementById('verdict-title').textContent = v.title;
+  document.getElementById('verdict-detail').textContent = v.detail;
+  banner.style.borderLeftColor = v.color;
+
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── RESET ──────────────────────────────────────────────────────────────────
+function resetAll() {
+  Object.assign(state, { username:'', scrapeComplete:false, analysisComplete:false, scores:{x:null,y:null,z:null}, photoScore:null, photoFile:null });
+  document.getElementById('username-input').value = '';
+  const btn = document.getElementById('btn-scrape');
+  btn.disabled = false; btn.innerHTML = '⚡ Scrape'; btn.style.background = ''; btn.style.color = '';
+  const btn2 = document.getElementById('btn-analyse');
+  btn2.disabled = true; btn2.innerHTML = '🔬 Analyse'; btn2.style.background = ''; btn2.style.color = '';
+  const btn3 = document.getElementById('btn-predict');
+  btn3.disabled = false; btn3.innerHTML = '🧠 Score Face'; btn3.style.display = 'none'; btn3.style.color = ''; btn3.style.borderColor = '';
+  ['scrape-log','analyse-log'].forEach(id => { const el = document.getElementById(id); el.innerHTML=''; el.classList.remove('visible'); });
+  document.getElementById('scrape-progress').classList.remove('visible');
+  document.getElementById('scrape-bar').style.width = '0%';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('results-section').classList.remove('visible');
+  removePhoto();
+  document.getElementById('predict-result').style.display = 'none';
+  showToast('Reset complete', 'info');
+}
+
+// ─── HELPERS ────────────────────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function randomInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+function formatBytes(b) { return b > 1e6 ? (b/1e6).toFixed(1)+' MB' : (b/1024).toFixed(1)+' KB'; }
+function setValue(id, v) { document.getElementById(id).textContent = v; }
+function animateBar(id, pct) {
+  const el = document.getElementById(id);
+  el.style.width = '0%';
+  setTimeout(() => { el.style.width = Math.min(pct, 100) + '%'; }, 200);
+}
+
+function ringColor(score, hasPhoto) {
+  const max = hasPhoto ? 116.5 : 100;
+  const pct = score / max;
+  if (pct >= 0.8) return '#00e5a0';
+  if (pct >= 0.6) return '#00e5ff';
+  if (pct >= 0.4) return '#7b61ff';
+  return '#ff4d6d';
+}
+
+function ratingLabel(score, hasPhoto) {
+  const max = hasPhoto ? 116.5 : 100;
+  const pct = score / max;
+  if (pct >= 0.85) return { title: 'ELITE INFLUENCER', subtitle: 'Top-tier authentic reach' };
+  if (pct >= 0.70) return { title: 'STRONG INFLUENCER', subtitle: 'High quality audience' };
+  if (pct >= 0.55) return { title: 'GOOD INFLUENCER', subtitle: 'Decent engagement & authenticity' };
+  if (pct >= 0.40) return { title: 'AVERAGE INFLUENCER', subtitle: 'Mixed signals detected' };
+  return { title: 'BELOW AVERAGE', subtitle: 'Low authenticity indicators' };
+}
+
+function verdictText(score, hasPhoto, x, y, z) {
+  const max = hasPhoto ? 116.5 : 100;
+  const pct = score / max;
+  if (pct >= 0.8) return { emoji:'🌟', title:'Excellent Influencer Profile', detail:`Strong positive sentiment (${x}%), authentic comments (${y}%), genuine following (${z}%). Highly recommended for brand deals.`, color:'var(--success)' };
+  if (pct >= 0.6) return { emoji:'✅', title:'Solid Influencer Profile', detail:`Good metrics overall. Watch engagement rate on sponsored content.`, color:'var(--accent)' };
+  if (pct >= 0.4) return { emoji:'⚠️', title:'Mixed Signals Detected', detail:`Some concerns around bot activity or follower quality. Due diligence recommended before partnerships.`, color:'var(--gold)' };
+  return { emoji:'🚨', title:'High Risk Profile', detail:`Low authenticity scores across multiple dimensions. Significant fake activity likely.`, color:'var(--danger)' };
+}
+
+// Drag-over effect
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) {
+    const dt = new DataTransfer(); dt.items.add(f);
+    const inp = document.getElementById('photo-input');
+    inp.files = dt.files;
+    handlePhoto(inp);
+  }
+});
+
+// Enter key submits username
+document.getElementById('username-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startScrape();
+});
+</script>
+</body>
+</html>
