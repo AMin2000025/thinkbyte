@@ -1,0 +1,8 @@
+streamlit
+requests
+python-dotenv
+pandas
+beautifulsoup4
+trafilatura
+fastapi
+uvicorn
